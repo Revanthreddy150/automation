@@ -1,58 +1,31 @@
 const express = require('express');
 const axios = require('axios');
 const app = express();
-const PORT = 3000;
 
-// The real website you want to load
-const TARGET_URL = 'https://example-education.com'; 
+// Use the site you mentioned
+const TARGET_URL = 'https://www.abhyas.ai'; 
 
-app.get('/', (req, res) => {
-    res.send(`
-        <html>
-            <body style="margin:0; overflow:hidden;">
-                <div style="padding:10px; background:#222; color:white; display:flex; gap:10px;">
-                    <button onclick="startBot()" style="padding:10px; cursor:pointer;">▶ RUN EXAM BOT</button>
-                    <span>Status: <b id="bot-status">Idle</b></span>
-                </div>
-                <iframe id="target-frame" src="/proxy" style="width:100%; height:100vh; border:none;"></iframe>
-                <script>
-                    async function startBot() {
-                        const frame = document.getElementById('target-frame');
-                        const doc = frame.contentDocument || frame.contentWindow.document;
-                        document.getElementById('bot-status').innerText = "Running...";
-                        
-                        // Bot Logic: Find the first input and type
-                        const input = doc.querySelector('input');
-                        if(input) {
-                            input.focus();
-                            input.value = "Automated Answer 101";
-                            input.style.backgroundColor = "yellow";
-                            document.getElementById('bot-status').innerText = "Success!";
-                        } else {
-                            document.getElementById('bot-status').innerText = "No input found!";
-                        }
-                    }
-                </script>
-            </body>
-        </html>
-    `);
-});
+app.use(express.static('.')); // Serves your index.html
 
-app.get('/proxy', async (req, res) => {
+app.get('/stream-site', async (req, res) => {
     try {
-        const response = await axios.get(TARGET_URL);
+        const response = await axios.get(TARGET_URL, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
+        });
+        
         let html = response.data;
-
-        // THE FIX: Rewrite relative links (e.g., /style.css) to absolute links (https://site.com/style.css)
-        // This ensures images, CSS, and JS load correctly from the original source.
         const origin = new URL(TARGET_URL).origin;
+
+        // Fix images/links so they load from abhyas.ai instead of your server
         html = html.replace(/(src|href)="\//g, `$1="${origin}/`);
 
-        res.set('Content-Security-Policy', "frame-ancestors *");
+        // Strip security headers that prevent framing
+        res.setHeader('Content-Security-Policy', "frame-ancestors *");
+        res.setHeader('X-Frame-Options', 'ALLOWALL');
         res.send(html);
     } catch (error) {
-        res.status(500).send("Error fetching site.");
+        res.status(500).send("Error: Could not bridge the website.");
     }
 });
 
-app.listen(PORT, () => console.log(`Bot Server active at port ${PORT}`));
+app.listen(3000, () => console.log('System ready at http://localhost:3000'));
