@@ -2,7 +2,6 @@ const express = require('express');
 const axios = require('axios');
 const app = express();
 
-// The site you want to automate
 const TARGET_URL = 'https://www.abhyas.ai'; 
 
 app.get('/', (req, res) => {
@@ -23,19 +22,18 @@ app.get('/', (req, res) => {
                         const doc = frame.contentDocument || frame.contentWindow.document;
                         document.getElementById('status').innerText = "Status: Searching...";
 
-                        // Find any input or button
                         const target = doc.querySelector('input') || doc.querySelector('button');
                         if(target) {
                             const rect = target.getBoundingClientRect();
-                            cursor.style.top = (rect.top + 50) + "px";
+                            cursor.style.top = (rect.top + 60) + "px";
                             cursor.style.left = rect.left + "px";
-                            document.getElementById('status').innerText = "Status: Moving Mouse...";
+                            document.getElementById('status').innerText = "Status: Bot Moving...";
                             
                             await new Promise(r => setTimeout(r, 1200));
                             target.focus();
-                            document.getElementById('status').innerText = "Status: Bot Interacting!";
+                            document.getElementById('status').innerText = "Status: Bot Working!";
                         } else {
-                            document.getElementById('status').innerText = "Status: No elements found yet.";
+                            document.getElementById('status').innerText = "Status: Click into the site first.";
                         }
                     }
                 </script>
@@ -49,13 +47,16 @@ app.get('/proxy', async (req, res) => {
         const response = await axios.get(TARGET_URL);
         let html = response.data;
         const origin = new URL(TARGET_URL).origin;
-        // Fix links
-        html = html.replace(/(src|href)="\//g, \`$1="\${origin}/\`);
+        
+        // This part was causing the error, fixed it here:
+        html = html.split('src="/').join('src="' + origin + '/');
+        html = html.split('href="/').join('href="' + origin + '/');
+
         res.setHeader('Content-Security-Policy', "frame-ancestors *");
         res.send(html);
     } catch (e) {
-        res.send("Proxy Error: Site blocked the connection.");
+        res.send("Proxy Error: Site blocked. Try a different URL in server.js");
     }
 });
 
-app.listen(3000, () => console.log('Server running!'));
+app.listen(3000, () => console.log('SERVER IS LIVE ON PORT 3000'));
